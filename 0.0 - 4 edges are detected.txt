@@ -1,0 +1,76 @@
+import cv2
+import numpy as np
+
+def preprocess_image(image):
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply adaptive thresholding
+    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    return thresh
+
+def find_sudoku_grid(contours):
+    # Initialize variables to store the best Sudoku puzzle grid
+    best_sudoku_grid = None
+    best_aspect_ratio_diff = float('inf')
+
+    # Iterate through contours
+    for contour in contours:
+        # Approximate the contour to a polygon
+        epsilon = 0.02 * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+
+        # Filter contours based on area
+        area = cv2.contourArea(approx)
+        if len(approx) == 4 and 1000 < area < 50000:
+            # Calculate aspect ratio
+            rect = cv2.minAreaRect(approx)
+            width, height = rect[1]
+            aspect_ratio = max(width, height) / min(width, height)
+
+            # Set an expected aspect ratio for Sudoku puzzle grid
+            expected_aspect_ratio = 1.0
+
+            # Calculate the difference in aspect ratio
+            aspect_ratio_diff = abs(aspect_ratio - expected_aspect_ratio)
+
+            # Update the best Sudoku puzzle grid
+            if aspect_ratio_diff < best_aspect_ratio_diff:
+                best_sudoku_grid = approx
+                best_aspect_ratio_diff = aspect_ratio_diff
+
+    return best_sudoku_grid
+
+# Initialize the webcam
+cap = cv2.VideoCapture(0)
+
+while True:
+    # Capture frame-by-frame
+    ret, frame = cap.read()
+
+    # Preprocess the frame
+    thresh = preprocess_image(frame)
+
+    # Find contours in the binary image
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Find the best Sudoku puzzle grid
+    sudoku_grid = find_sudoku_grid(contours)
+
+    if sudoku_grid is not None:
+        # Draw the best Sudoku puzzle grid on the original frame
+        cv2.drawContours(frame, [sudoku_grid], 0, (0, 255, 0), 2)
+
+        # TODO: Extract candidate digit blobs from the identified Sudoku puzzle grid
+
+    # Display the resulting frame
+    cv2.imshow('Sudoku Recognition', frame)
+
+    # Break the loop when 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release the webcam and close all OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
