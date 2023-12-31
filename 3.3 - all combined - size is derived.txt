@@ -203,22 +203,6 @@ def sudoku_puzzle_verification(frame, approx):
             # Draw updated horizontal lines on the warped image
             draw_lines_on_image(warped.copy(), updated_horizontal_lines, 'updated_horizontal_lines Lines', color_purple, 0.55)
 
-            # TODO: Approch 01 - Contours to crop to small parts
-
-            warped_contour_detected_image = warped.copy()
-            # Find contours in the flattened Sudoku grid image
-            cell_contours, _ = cv2.findContours(warped_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-            # Filter only rectangular contours
-            cell_contours = [contour for contour in cell_contours if len(contour) >= 4]
-
-            # Draw contours in blue on the Sudoku Wrapped Image window
-            cv2.drawContours(warped_contour_detected_image, cell_contours, -1, (255, 0, 0), 2)
-
-            if warped_contour_detected_image is not None:
-                cv2.imshow('warped_contour_detected_image Image',
-                           cv2.resize(warped_contour_detected_image, (0, 0), fx=0.70, fy=0.70))
-
             if warped_lines is not None:
                 for line in warped_lines:
                     x1, y1, x2, y2 = line[0]
