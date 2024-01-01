@@ -161,64 +161,69 @@ def average_lines(lines):
 
     return avg_line
 
+
+
+
+
+
+# Calculate cell size and break the image into cells
+def calculate_and_draw_cells(frame, puzzle_size):
+    height, width = frame.shape[:2]
+    cell_height = (height / puzzle_size) * 0.995
+    cell_width = (width / puzzle_size) * 0.995
+
+    for i in range(puzzle_size):
+        for j in range(puzzle_size):
+            x1 = int(j * cell_width)
+            y1 = int(i * cell_height)
+            x2 = int((j + 1) * cell_width)
+            y2 = int((i + 1) * cell_height)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color_teal, 2)
+
+    return frame
+
+
+
+
 # Single iteration of the overall process
 def sudoku_puzzle_verification(frame, approx):
     global total_iterations, total_vertical_lines_length, puzzle_size, initial_desctiprion_reported
-
 
     if len(approx) == 4:
         pts_dst = np.array([[460, 460], [0, 460], [0, 0], [460, 0]], dtype=np.float32)
         matrix = cv2.getPerspectiveTransform(approx.reshape(4, 2).astype(np.float32), pts_dst)
         warped = cv2.warpPerspective(frame, matrix, (460, 460))
-        # warped = cv2.rotate(warped, cv2.ROTATE_90_COUNTERCLOCKWISE)
         warped = cv2.flip(warped, 0)
         warped_edges = cv2.Canny(warped, 50, 150)
         warped_lines = cv2.HoughLinesP(warped_edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=100)
 
         if warped_lines is not None:
-            # Cluster lines into vertical and horizontal
-            vertical_lines, horizontal_lines = cluster_lines(warped_lines[:, 0, :]) # Horizontal and vertical line sets are seperated
+            vertical_lines, horizontal_lines = cluster_lines(warped_lines[:, 0, :])
 
-            # print(f"vertical size : {len(vertical_lines)} and horizontal size : {len(horizontal_lines)}")
-
-            # Draw updated vertical lines on the warped image
             draw_lines_on_image(warped.copy(), vertical_lines, 'Vertical Lines', color_orange, 0.55)
+            draw_lines_on_image(warped.copy(), horizontal_lines, 'Horizontal Lines', color_purple, 0.55)
 
-            # Draw updated horizontal lines on the warped image
-            draw_lines_on_image(warped.copy(), horizontal_lines, 'Horizontal Lines', color_purple, 0.55) # Yellow
-
-            # Sort and update vertical lines
             sorted_vertical_lines = sort_lines(vertical_lines, orientation='vertical')
             updated_vertical_lines = check_and_update_gaps(sorted_vertical_lines, gap_threshold=10)
 
-            # Sort and update horizontal lines
             sorted_horizontal_lines = sort_lines(horizontal_lines, orientation='horizontal')
             updated_horizontal_lines = check_and_update_gaps(sorted_horizontal_lines, gap_threshold=10)
 
-            # print(f"updated_vertical_lines size : {len(updated_vertical_lines)} and updated_horizontal_lines size : {len(updated_horizontal_lines)}")
-
-            # Draw updated vertical lines on the warped image
             draw_lines_on_image(warped.copy(), updated_vertical_lines, 'updated_vertical_lines Lines', color_orange, 0.55)
-
-            # Draw updated horizontal lines on the warped image
             draw_lines_on_image(warped.copy(), updated_horizontal_lines, 'updated_horizontal_lines Lines', color_purple, 0.55)
-
-
 
             if warped_lines is not None:
                 for line in warped_lines:
                     x1, y1, x2, y2 = line[0]
                     cv2.line(warped, (x1, y1), (x2, y2), (0, 0, 255), 1)
 
-            # Draw updated lines on the warped image
             updated_lines = updated_vertical_lines + updated_horizontal_lines
-            draw_lines_on_image(warped, warped_lines[:, 0, :], 'Warped Image', (0, 0, 255), 0.85)  # Red
+            draw_lines_on_image(warped, warped_lines[:, 0, :], 'Warped Image', (0, 0, 255), 0.85)
 
             total_vertical_lines_length += len(updated_vertical_lines)
             total_iterations += 1
 
-            # Calculate average lines and determine puzzle size after 2 seconds
-            if 10 <= total_iterations <= 20 and not initial_desctiprion_reported:  # Adjust this value based on your frame rate (iterations per second)
+            if 10 <= total_iterations <= 20 and not initial_desctiprion_reported:
                 grid_size_approximater = total_vertical_lines_length / (total_iterations)
 
                 if grid_size_approximater < 12:
@@ -226,15 +231,25 @@ def sudoku_puzzle_verification(frame, approx):
                 else:
                     puzzle_size = 16
 
-                print(f"vertical size : {len(vertical_lines)} and horizontal size : {len(horizontal_lines)}")
-                print(f"updated_vertical_lines size : {len(updated_vertical_lines)} and updated_horizontal_lines size : {len(updated_horizontal_lines)}")
                 print(f"Averaged Puzzle Size: {puzzle_size}")
                 print(f"total_vertical_lines_length: {total_vertical_lines_length}")
                 print(f"grid_size_approximater: {grid_size_approximater}")
                 print(f"total_iterations: {total_iterations}")
                 initial_desctiprion_reported = True
 
-            # TODO do the code in this part.. create the functions and call properly to meet my requirements
+                # Calculate cell size and draw rectangles around each cell
+                calculate_and_draw_cells(warped, puzzle_size)
+
+                # Display the resulting frame with detected contours and Hough lines
+                display_frame(frame)
+
+                # Create a new window for the wrapped image with the grid
+                cv2.imshow('Wrapped Image with Grid', warped)
+
+                # Add a wait key to the new window to ensure it is displayed
+                cv2.waitKey(0)
+
+
 
 def display_frame(frame):
     """
@@ -300,29 +315,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-ok now above is the lastes code, in it under sudoku_puzzle_verification function, you will see a TODO I have written. below to that call these following functios after creating them
-
-
-if the puzzle_size value is not null. (If it is 9 or 16) you should do this part of the operation. So a condition check should be done.
-These are the functions I need.
-create a new copy of the warped image and divide it based on the puzzle_size value which is not Null. this division should be donee exactly to the puzzle lengths without considering any margines. if the image is 100 long and 200 in height and if the puzzle size is 9, the divided parts should be like this. height is 200/9 and the wigdth should be 100/9. so no margins
-
- if the size is 9 divide the whole warped image window into 9 pieces vertically and horizontally(The image can be not a square. so the horizontal and vertical side lengths can de different. so you have to calculate before dividing)
-So if the puzzle_size is 9, the image should be divided into 81 pieces( 9x9)
-
-at the same time if the puzzle_size is 16, you should divide the warped image into 16 prices vertivcally and horizontally. so at the end 256 pieces  should be there(16x16)
-
-create these new fucntions and call them under todo part please. You should have the idea abnout this dividing thisng since we have to crop the image into rthat number of rectanguler parts in the next step. so keep them recorded as well
-
-break the whole image without any margine into puzzle size reactangles. SO at the end the image is divide into 81 parts if the puzzle size is 9. if the puzzle size is 16, it should be devided into 256 parts. without any margin
-
-then there should not any margins in any direction and all those divided areas combined should fit the whole image ithout any remaining areas at tany doreaction.
-
-can you show me all the cells in a single image. can we find the centroid of each cell and draw points on the centroids. let le to adgest the radious so I can make the adjustments.
-
-Use color_teal to draw circles(With no filling but only lines

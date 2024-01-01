@@ -234,7 +234,6 @@ def sudoku_puzzle_verification(frame, approx):
                 print(f"total_iterations: {total_iterations}")
                 initial_desctiprion_reported = True
 
-            # TODO do the code in this part.. create the functions and call properly to meet my requirements
 
 def display_frame(frame):
     """
@@ -300,29 +299,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-ok now above is the lastes code, in it under sudoku_puzzle_verification function, you will see a TODO I have written. below to that call these following functios after creating them
-
-
-if the puzzle_size value is not null. (If it is 9 or 16) you should do this part of the operation. So a condition check should be done.
-These are the functions I need.
-create a new copy of the warped image and divide it based on the puzzle_size value which is not Null. this division should be donee exactly to the puzzle lengths without considering any margines. if the image is 100 long and 200 in height and if the puzzle size is 9, the divided parts should be like this. height is 200/9 and the wigdth should be 100/9. so no margins
-
- if the size is 9 divide the whole warped image window into 9 pieces vertically and horizontally(The image can be not a square. so the horizontal and vertical side lengths can de different. so you have to calculate before dividing)
-So if the puzzle_size is 9, the image should be divided into 81 pieces( 9x9)
-
-at the same time if the puzzle_size is 16, you should divide the warped image into 16 prices vertivcally and horizontally. so at the end 256 pieces  should be there(16x16)
-
-create these new fucntions and call them under todo part please. You should have the idea abnout this dividing thisng since we have to crop the image into rthat number of rectanguler parts in the next step. so keep them recorded as well
-
-break the whole image without any margine into puzzle size reactangles. SO at the end the image is divide into 81 parts if the puzzle size is 9. if the puzzle size is 16, it should be devided into 256 parts. without any margin
-
-then there should not any margins in any direction and all those divided areas combined should fit the whole image ithout any remaining areas at tany doreaction.
-
-can you show me all the cells in a single image. can we find the centroid of each cell and draw points on the centroids. let le to adgest the radious so I can make the adjustments.
-
-Use color_teal to draw circles(With no filling but only lines
