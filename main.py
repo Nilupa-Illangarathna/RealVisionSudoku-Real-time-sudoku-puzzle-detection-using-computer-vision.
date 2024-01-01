@@ -64,7 +64,7 @@ def draw_contour(frame, contour, color):
     :param frame: Original frame.
     :param contour: Contour to be drawn.
     """
-    cv2.drawContours(frame, [contour], -1, color, 3)
+    cv2.drawContours(frame, [contour], -1, color, 1)
 
 
 #/////////////////////// Seperate vertical and horizontal Hough Lines (to size prediction) ////////////////////
@@ -176,13 +176,14 @@ def average_lines(lines):
 
 # Calculate cell size and break the image into cells
 # Function to save cropped circles as images
+# Function to save cropped circles as images
 def save_cropped_circles(frame, centroids, puzzle_size):
     height, width = frame.shape[:2]
-    cell_height = (height / puzzle_size) * 0.995
-    cell_width = (width / puzzle_size) * 0.995
+    cell_height = (height / puzzle_size)
+    cell_width = (width / puzzle_size)
 
     for idx, centroid in enumerate(centroids):
-        radius = int(0.9 * min(cell_height, cell_width))
+        radius = int(0.50 * min(cell_height, cell_width))
 
         # Calculate the coordinates for cropping
         x_crop = max(0, centroid[0] - radius)
@@ -193,8 +194,12 @@ def save_cropped_circles(frame, centroids, puzzle_size):
         # Crop the circle region
         cropped_circle = frame[y_crop:y2_crop, x_crop:x2_crop]
 
-        # Save the cropped circle as an image
-        output_path = os.path.join(output_folder, f'circle_{idx + 1}.png')
+        # Calculate the row and column numbers (1-indexed)
+        row_number = (idx // puzzle_size) + 1
+        column_number = (idx % puzzle_size) + 1
+
+        # Save the cropped circle as an image with the specified naming convention
+        output_path = os.path.join(output_folder, f'cropped_{row_number} x {column_number}.png')
         cv2.imwrite(output_path, cropped_circle)
 
 # Modify calculate_and_draw_cells to save cropped circles
@@ -203,8 +208,8 @@ def calculate_and_draw_cells(frame, original_warped_frame, puzzle_size):
     original_frame = copy.deepcopy(original_warped_frame)
 
     height, width = frame.shape[:2]
-    cell_height = (height / puzzle_size) * 0.995
-    cell_width = (width / puzzle_size) * 0.995
+    cell_height = (height / puzzle_size)
+    cell_width = (width / puzzle_size)
 
     centroids = []  # To store the centroids of rectangles
 
@@ -223,11 +228,11 @@ def calculate_and_draw_cells(frame, original_warped_frame, puzzle_size):
 
     # Draw red points at the centroids
     for centroid in centroids:
-        cv2.circle(frame, centroid, 3, color_red, -1)
+        cv2.circle(frame, centroid, 1, color_red, -1)
 
     # Draw circles around each centroid
     for centroid in centroids:
-        radius = int(0.9 * min(cell_height, cell_width))
+        radius = int(0.50 * min(cell_height, cell_width))
         cv2.circle(frame, centroid, radius, color_purple, 1)
 
     # Save cropped circles as images
@@ -273,6 +278,22 @@ def sudoku_puzzle_verification(frame, original_frame,  approx):
 
             draw_lines_on_image(warped.copy(), updated_vertical_lines, 'updated_vertical_lines Lines', color_orange, 0.55)
             draw_lines_on_image(warped.copy(), updated_horizontal_lines, 'updated_horizontal_lines Lines', color_purple, 0.55)
+
+            # TODO: Approch 01 - Contours to crop to small parts
+
+            warped_contour_detected_image = warped.copy()
+            # Find contours in the flattened Sudoku grid image
+            cell_contours, _ = cv2.findContours(warped_edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # Filter only rectangular contours
+            cell_contours = [contour for contour in cell_contours if len(contour) >= 4]
+
+            # Draw contours in blue on the Sudoku Wrapped Image window
+            cv2.drawContours(warped_contour_detected_image, cell_contours, -1, (255, 0, 0), 2)
+
+            if warped_contour_detected_image is not None:
+                cv2.imshow('warped_contour_detected_image Image',
+                           cv2.resize(warped_contour_detected_image, (0, 0), fx=0.70, fy=0.70))
 
             if warped_lines is not None:
                 for line in warped_lines:
