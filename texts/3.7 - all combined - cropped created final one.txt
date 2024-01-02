@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import os
 import copy
-import pytesseract
 
 # Ensure the "outputs" folder exists
 output_folder = 'outputs'
