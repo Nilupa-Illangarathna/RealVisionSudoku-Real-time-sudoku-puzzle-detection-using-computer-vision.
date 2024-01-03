@@ -1,9 +1,16 @@
 # Lib imports
+import time
+
 import cv2
 import numpy as np
 import os
 import copy
+from PIL import Image
 import pytesseract
+
+# Set the path to the Tesseract executable
+pytesseract.pytesseract.tesseract_cmd = r'E:\Tesseract OCR\tesseract.exe'
+
 
 # Ensure the "outputs" folder exists
 output_folder = 'outputs'
@@ -25,8 +32,11 @@ color_black = (0 , 0 , 0) # Black
 # Global variables
 initial_desctiprion_reported = False # if False, it waiting to print them for once, else it will not print again
 total_iterations = 0
+first_time=True
 total_vertical_lines_length = 0
 puzzle_size = None
+
+circle_radius_ratio = 0.44
 
 # # Video capture
 # def initialize_video_capture(device_index=0):
@@ -201,7 +211,7 @@ def save_cropped_circles(frame, centroids, puzzle_size):
     cell_width = (width / puzzle_size)
 
     for idx, centroid in enumerate(centroids):
-        radius = int(0.40 * min(cell_height, cell_width))
+        radius = int(circle_radius_ratio * min(cell_height, cell_width))
 
         # Calculate the coordinates for cropping
         x_crop = max(0, centroid[0] - radius)
@@ -250,7 +260,7 @@ def calculate_and_draw_cells(frame, original_warped_frame, puzzle_size):
 
     # Draw circles around each centroid
     for centroid in centroids:
-        radius = int(0.40 * min(cell_height, cell_width))
+        radius = int(circle_radius_ratio * min(cell_height, cell_width))
         cv2.circle(frame, centroid, radius, color_purple, 1)
 
     # Save cropped circles as images
@@ -260,29 +270,91 @@ def calculate_and_draw_cells(frame, original_warped_frame, puzzle_size):
 
 
 
+def apply_ocr_on_cropped_images(puzzle_size):
+    # Iterate through each cell in the grid
+    for i in range(1, puzzle_size + 1):
+        for j in range(1, puzzle_size + 1):
+            # Construct the image path based on the naming convention
+            image_path = os.path.join(output_folder, f'cropped_{i} x {j}.png')
 
+            # Read the input image using OpenCV
+            image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+            # Preprocess the image
+            preprocessed_image = preprocess_image(image)
+
+            # Specify OCR engine mode (6 for treating the image as sparse text)
+            # and whitelist to capture only digits
+            custom_config = f'--psm 6 -c tessedit_char_whitelist=0123456789'
+
+            # Perform OCR using Tesseract with custom configuration
+            text = pytesseract.image_to_string(preprocessed_image, config=custom_config)
+
+            # Validate and save the extracted text to the sudoku_puzzle.txt file
+            validate_and_save_to_file(text, i, j, puzzle_size)
+
+def preprocess_image(image):
+    # Check if the image is already grayscale
+    if len(image.shape) == 2:
+        return image
+
+    # Convert to grayscale if the image has more than one channel
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply GaussianBlur for noise reduction
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Apply adaptive thresholding
+    _, thresholded = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    return thresholded
+
+
+def validate_and_save_to_file(text, row, column, puzzle_size):
+    # Parse the detected text and convert to an integer
+    try:
+        number = int(text)
+    except ValueError:
+        # If OCR fails to detect a number, consider it as 0
+        number = 0
+
+    # Validate the number based on the puzzle size
+    if 0 <= number <= puzzle_size:
+        # Append the number to the sudoku_puzzle.txt file
+        with open('sudoku_puzzle.txt', 'a') as file:
+            file.write(f"{number} ")
+
+        # If the column is the last one, start a new line
+        if column == puzzle_size:
+            with open('sudoku_puzzle.txt', 'a') as file:
+                file.write('\n')
 
 
 # Single iteration of the overall process
 def sudoku_puzzle_verification(frame, original_frame,  approx):
-    global total_iterations, total_vertical_lines_length, puzzle_size, initial_desctiprion_reported
+    global total_iterations, total_vertical_lines_length, puzzle_size, initial_desctiprion_reported, first_time
 
     if len(approx) == 4:
         pts_dst = np.array([[460, 460], [0, 460], [0, 0], [460, 0]], dtype=np.float32)
         matrix = cv2.getPerspectiveTransform(approx.reshape(4, 2).astype(np.float32), pts_dst)
 
         warped = cv2.warpPerspective(frame, matrix, (460, 460))
+        # warped = cv2.rotate(warped, cv2.ROTATE_90_COUNTERCLOCKWISE)
         warped = cv2.flip(warped, 0)
         warped_edges = cv2.Canny(warped, 50, 150)
         warped_lines = cv2.HoughLinesP(warped_edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=100)
 
-        warped_original = cv2.warpPerspective(original_frame, matrix, (460, 460)) #Use this as the original image
+        warped_original = cv2.warpPerspective(original_frame, matrix, (460, 460))
+        # warped_original = cv2.rotate(warped_original, cv2.ROTATE_90_COUNTERCLOCKWISE)
         warped_original = cv2.flip(warped_original, 0)
 
         # Make a copy of the original frame
         original_warped_frame = copy.deepcopy(warped_original)
 
-        cv2.imshow('Sudoku Recddognition', original_warped_frame)
+        if first_time:
+
+            cv2.imshow('Sudoku Recognition', original_warped_frame)
+            first_time=False
 
         if warped_lines is not None:
             vertical_lines, horizontal_lines = cluster_lines(warped_lines[:, 0, :])
@@ -343,13 +415,18 @@ def sudoku_puzzle_verification(frame, original_frame,  approx):
                 # Calculate cell size and draw rectangles around each cell
                 calculate_and_draw_cells(warped, original_warped_frame, puzzle_size)
 
+
                 # Display the resulting frame with detected contours and Hough lines
                 display_frame(frame)
 
                 # Create a new window for the wrapped image with the grid
                 cv2.imshow('Wrapped Image with Grid', warped)
 
+                # Add a delay to allow time for the window to be displayed
+                cv2.waitKey(500)  # Adjust the delay time (in milliseconds) as needed
 
+                # TODO : Add the OCR code call after this
+                apply_ocr_on_cropped_images(puzzle_size)
 
 
 def display_frame(frame, scale_factor=0.3):

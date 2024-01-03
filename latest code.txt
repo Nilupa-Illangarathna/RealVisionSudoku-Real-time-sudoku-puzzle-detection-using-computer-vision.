@@ -30,10 +30,11 @@ color_black = (0 , 0 , 0) # Black
 # Global variables
 initial_desctiprion_reported = False # if False, it waiting to print them for once, else it will not print again
 total_iterations = 0
+first_time=True
 total_vertical_lines_length = 0
 puzzle_size = None
 
-circle_radius_ratio = 0.40
+circle_radius_ratio = 0.44
 
 # # Video capture
 # def initialize_video_capture(device_index=0):
@@ -310,24 +311,29 @@ def validate_and_save_to_file(text, row, column, puzzle_size):
 
 # Single iteration of the overall process
 def sudoku_puzzle_verification(frame, original_frame,  approx):
-    global total_iterations, total_vertical_lines_length, puzzle_size, initial_desctiprion_reported
+    global total_iterations, total_vertical_lines_length, puzzle_size, initial_desctiprion_reported, first_time
 
     if len(approx) == 4:
         pts_dst = np.array([[460, 460], [0, 460], [0, 0], [460, 0]], dtype=np.float32)
         matrix = cv2.getPerspectiveTransform(approx.reshape(4, 2).astype(np.float32), pts_dst)
 
         warped = cv2.warpPerspective(frame, matrix, (460, 460))
+        # warped = cv2.rotate(warped, cv2.ROTATE_90_COUNTERCLOCKWISE)
         warped = cv2.flip(warped, 0)
         warped_edges = cv2.Canny(warped, 50, 150)
         warped_lines = cv2.HoughLinesP(warped_edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=100)
 
-        warped_original = cv2.warpPerspective(original_frame, matrix, (460, 460)) #Use this as the original image
+        warped_original = cv2.warpPerspective(original_frame, matrix, (460, 460))
+        # warped_original = cv2.rotate(warped_original, cv2.ROTATE_90_COUNTERCLOCKWISE)
         warped_original = cv2.flip(warped_original, 0)
 
         # Make a copy of the original frame
         original_warped_frame = copy.deepcopy(warped_original)
 
-        cv2.imshow('Sudoku Recognition', original_warped_frame)
+        if first_time:
+
+            cv2.imshow('Sudoku Recognition', original_warped_frame)
+            first_time=False
 
         if warped_lines is not None:
             vertical_lines, horizontal_lines = cluster_lines(warped_lines[:, 0, :])
