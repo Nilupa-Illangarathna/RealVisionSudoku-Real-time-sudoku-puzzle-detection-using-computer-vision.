@@ -339,14 +339,14 @@ def sudoku_puzzle_verification(frame, original_frame,  approx):
         matrix = cv2.getPerspectiveTransform(approx.reshape(4, 2).astype(np.float32), pts_dst)
 
         warped = cv2.warpPerspective(frame, matrix, (460, 460))
-        # warped = cv2.rotate(warped, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        warped = cv2.flip(warped, 0)
+        warped = cv2.rotate(warped, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        warped = cv2.flip(warped, 1)
         warped_edges = cv2.Canny(warped, 50, 150)
         warped_lines = cv2.HoughLinesP(warped_edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=100)
 
         warped_original = cv2.warpPerspective(original_frame, matrix, (460, 460))
-        # warped_original = cv2.rotate(warped_original, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        warped_original = cv2.flip(warped_original, 0)
+        warped_original = cv2.rotate(warped_original, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        warped_original = cv2.flip(warped_original, 1)
 
         # Make a copy of the original frame
         original_warped_frame = copy.deepcopy(warped_original)
@@ -368,10 +368,9 @@ def sudoku_puzzle_verification(frame, original_frame,  approx):
             sorted_horizontal_lines = sort_lines(horizontal_lines, orientation='horizontal')
             updated_horizontal_lines = check_and_update_gaps(sorted_horizontal_lines, gap_threshold=10)
 
-            draw_lines_on_image(warped.copy(), updated_vertical_lines, 'updated_vertical_lines Lines', color_orange, 0.55)
-            draw_lines_on_image(warped.copy(), updated_horizontal_lines, 'updated_horizontal_lines Lines', color_purple, 0.55)
+            # draw_lines_on_image(warped.copy(), updated_vertical_lines, 'updated_vertical_lines Lines', color_orange, 0.55)
+            # draw_lines_on_image(warped.copy(), updated_horizontal_lines, 'updated_horizontal_lines Lines', color_purple, 0.55)
 
-            # TODO: Approch 01 - Contours to crop to small parts
 
             warped_contour_detected_image = warped.copy()
             # Find contours in the flattened Sudoku grid image
